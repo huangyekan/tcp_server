@@ -2,19 +2,17 @@ package main
 
 import (
 	"fmt"
-	"reflect"
+	"tcp_server/server"
 )
 
 type Test struct {
 	
 }
 
-func (t *Test) Test1(arg string)  string{
-	return arg
+func (t *Test) Test1() {
+	fmt.Println("ccc")
 }
 
 func main() {
-	t := new(Test)
-	v := reflect.ValueOf(t).MethodByName("Test1").Call()
-	fmt.Println(v[0])
+	server.Run()
 }
