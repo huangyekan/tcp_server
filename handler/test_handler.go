@@ -8,7 +8,7 @@ type TestHandler struct {
 
 }
 
-func (t *TestHandler) test(params map[string]interface{}) *protol.Response {
+func (t *TestHandler) Test(params map[string]interface{}) *protol.Response {
 	result := make(map[string]interface{})
 	result["name"] = "test"
 	return &protol.Response{

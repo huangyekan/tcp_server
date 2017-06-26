@@ -27,6 +27,7 @@ func Run() {
 	}
 	for {
 		conn, err := lisener.AcceptTCP();
+		log.Println("accept")
 		if err != nil {
 			log.Println("连接失败", err.Error())
 			continue
@@ -41,12 +42,13 @@ func handle(conn *net.TCPConn) {
 	var request string
 	for {
 		n, err := conn.Read(buf)
+		log.Println(n)
+		if n == 0 {
+			break;
+		}
 		if err != nil {
-			if n == 0 {
-				break;
-			} else {
-				log.Println("读取数据异常", err.Error())
-			}
+			log.Println("读取数据异常", err.Error())
+			break;
 		}
 		request += string(buf[0:n])
 	}
@@ -66,16 +68,15 @@ func handle(conn *net.TCPConn) {
 }
 
 func doRequest(message *protol.Message) {
-	response, err := handler.Dispatcher(&message.Content)
-	if err != nil {
-		response = protol.NETWORK_ERROR
+	response := handler.Dispatcher(&message.Content)
+	res, _ := json.Marshal(response)
+	log.Println("res ", string(res))
+	conn := ConnMap[message.Header.Token]
+	if conn == nil {
+		log.Println("用户已断开")
+		return
 	}
-	res, err := json.Marshal(response)
-	if err != nil {
-		log.Println("返回参数序列话错误", err)
-		response = protol.NETWORK_ERROR
-	}
-	ConnMap[message.Header.Token].Write(res)
+	conn.Write(res)
 }
 
 func doRegister(conn *net.TCPConn, message *protol.Message) {
@@ -84,10 +85,12 @@ func doRegister(conn *net.TCPConn, message *protol.Message) {
 }
 
 func ping(conn *net.TCPConn) {
+	log.Println(conn.RemoteAddr().String() + " ping success")
 	conn.Write([]byte("success..."))
 }
 
 func parseMessage(message string) *protol.Message {
+	log.Println(message)
 	result := new(protol.Message)
 	err := json.Unmarshal([]byte(message), &result)
 	if err != nil {

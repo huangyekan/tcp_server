@@ -12,5 +12,5 @@ type Header struct {
 
 type Content struct {
 	Method string `method`
-	Params string `params`
+	Params map[string]interface{} `params`
 }
