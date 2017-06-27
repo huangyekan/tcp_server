@@ -10,7 +10,6 @@ import (
 
 var ConnMap = make(map[string]*net.TCPConn)
 
-var messageChannel = make(chan string, 16)
 
 const (
 	PING     = "ping"
@@ -42,7 +41,8 @@ func Run() {
 func handleConnection(conn *net.TCPConn) {
 	buf := make([]byte, 1024)
 	tmpBuf := make([]byte, 0)
-	go handleMessage(conn)
+	var messageChannel = make(chan string, 128)
+	go handleMessage(conn, messageChannel)
 	for {
 		n, err := conn.Read(buf)
 		buf := append(buf[:n], tmpBuf...)
@@ -61,7 +61,7 @@ func handleConnection(conn *net.TCPConn) {
 
 }
 
-func handleMessage(conn *net.TCPConn) {
+func handleMessage(conn *net.TCPConn, messageChannel chan string) {
 	for {
 		message := <-messageChannel
 		msg := parseMessage(message)
