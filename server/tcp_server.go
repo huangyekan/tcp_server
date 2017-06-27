@@ -10,6 +10,8 @@ import (
 
 var ConnMap = make(map[string]*net.TCPConn)
 
+var messageChannel = make(chan string, 16)
+
 const (
 	PING     = "ping"
 	REQUEST  = "request"
@@ -32,39 +34,46 @@ func Run() {
 			log.Println("连接失败", err.Error())
 			continue
 		}
-		go handle(conn)
+		go handleConnection(conn)
 		defer conn.Close()
 	}
 }
 
-func handle(conn *net.TCPConn) {
+func handleConnection(conn *net.TCPConn) {
 	buf := make([]byte, 1024)
-	var request string
+	tmpBuf := make([]byte, 0)
+	go handleMessage(conn)
 	for {
 		n, err := conn.Read(buf)
-		log.Println(n)
-		if n == 0 {
-			break;
-		}
+		buf := append(buf[:n], tmpBuf...)
+		log.Println(string(buf))
 		if err != nil {
 			log.Println("读取数据异常", err.Error())
 			break;
 		}
-		request += string(buf[0:n])
-	}
-	message := parseMessage(request)
-	switch message.Header.Type {
-	case PING:
-		ping(conn)
-		break
-	case REQUEST:
-		doRequest(message)
-		break
-	case REGISTER:
-		doRegister(conn, message)
-		break
+		messages, leftBuf := protol.Decode(buf, []string{})
+		for _, message := range messages {
+			log.Println("message : ", message)
+			messageChannel <- message
+		}
+		tmpBuf = leftBuf
 	}
 
+}
+
+func handleMessage(conn *net.TCPConn) {
+	for {
+		message := <-messageChannel
+		msg := parseMessage(message)
+		switch msg.Header.Type {
+		case PING:
+			ping(conn)
+		case REQUEST:
+			doRequest(msg)
+		case REGISTER:
+			doRegister(conn, msg)
+		}
+	}
 }
 
 func doRequest(message *protol.Message) {
@@ -76,7 +85,8 @@ func doRequest(message *protol.Message) {
 		log.Println("用户已断开")
 		return
 	}
-	conn.Write(res)
+	log.Println(conn.RemoteAddr().String())
+	conn.Write([]byte("aaa"))
 }
 
 func doRegister(conn *net.TCPConn, message *protol.Message) {
@@ -90,7 +100,6 @@ func ping(conn *net.TCPConn) {
 }
 
 func parseMessage(message string) *protol.Message {
-	log.Println(message)
 	result := new(protol.Message)
 	err := json.Unmarshal([]byte(message), &result)
 	if err != nil {
