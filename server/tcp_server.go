@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"tcp_server/protol"
 	"tcp_server/handler"
+	"time"
 )
 
 var ConnMap = make(map[string]*net.TCPConn)
@@ -28,6 +29,7 @@ func Run() {
 	}
 	for {
 		conn, err := lisener.AcceptTCP();
+		conn.SetKeepAlivePeriod(time.Second * 30)
 		log.Println("accept")
 		if err != nil {
 			log.Println("连接失败", err.Error())
